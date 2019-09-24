@@ -1,13 +1,15 @@
 # Entity Linking
 
-При решении задачи применения подхода [End2End](https://github.com/dalab/end2end_neural_el) к русскому языку было сделано:
+Applying [End2End](https://github.com/dalab/end2end_neural_el) approach to Entity Linking (EL) task in russian language.
 
-1.  Парсинг дампа Википедии
-2.  Создание файлов с информацией о базе знаний
-3.  Эмуляция размеченного датасета
-4.  Подсчет словаря частоты встречаемости mention: entities
-5.  Форматирование words&entities embeddings из [Wikipedia2Vec](https://wikipedia2vec.github.io/wikipedia2vec/) для модели
-6.  Запуск модели на русскоязычных данных
+The code solves several tasks:
+
+1.  Parsing of Russian Wikipedia dump
+2.  Creating files with info about knowledge base (KB, Wikipedia)
+3.  Emulation of marked dataset used in End2End approach
+4.  Calculating dictionary of mention: entities frequency
+5.  Formatting of words&entities embeddings from [Wikipedia2Vec](https://wikipedia2vec.github.io/wikipedia2vec/) for the model
+6.  Running the model with Russian language data
 
 ### Prerequisites
 
@@ -17,30 +19,30 @@ pip install -r requirements.txt
 
 ### Installing
 
-Данные, нужные для запуска тренировки End2End модели можно скачать [здесь](https://drive.google.com/drive/folders/19KtVTKnQuF6ZMZ76NJZr2QT_5xHp5Mt6?usp=sharing). Для запуска модели см. пункт Running the End2end model.
+Data needed for running End2End model training can be downloaded here [здесь](https://drive.google.com/drive/folders/19KtVTKnQuF6ZMZ76NJZr2QT_5xHp5Mt6?usp=sharing). For running of the model go to "Running the End2end model" part.
 
-При необходимости воспроизведения получения данных можно следовать инструкции ниже.
+For reproducing data obtaining one can follow instruction below.
 
-##### Парсинг дампа Википедии
+##### Wikipedia dump parsing
 
 
-1.   Скачать xml dump Википедии (например, [последний дамп русскоязычной википедии](http://dumps.wikimedia.org/ruwiki/latest/ruwiki-latest-pages-articles.xml.bz2))
-2.   Извлечь текстовую информацию при помощи [Wikiextractor](https://github.com/attardi/wikiextractor) (not json option)
-3.   Объединить все текстовые файлы в один 'textWithAnchorsFromAllWikipedia.txt' файл 
+1.  Download Wikipedia dump (for example, [last dump of russian Wikiedia](http://dumps.wikimedia.org/ruwiki/latest/ruwiki-latest-pages-articles.xml.bz2))
+2.   Extract text info by [Wikiextractor](https://github.com/attardi/wikiextractor) (not json option)
+3.   Join all the text files in one 'textWithAnchorsFromAllWikipedia.txt' file
 
 ```
 python3 WikiDumpTxt_join.py -p='./wiki' -o='textWithAnchorsFromAllWikipedia.txt'
 ```
 
-где `./wiki` - путь к директории с викиэкстрактнутыми файлами.
+where `./wiki` - path to wikiextracted files.
 
-##### Создание файлов с информацией о базе знаний
+##### Creating files with nfo about knowledge base
 
 ```
 python3 wiki_info_create.py -p='./' -w='ruwiki-latest-pages-articles.xml'
 ```
 
-где `./` - путь к xml дампу Википедии, а `ruwiki-latest-pages-articles.xml` - его имя.
+where `./` - path to Wikipedia dump xml file and `ruwiki-latest-pages-articles.xml` is its name.
 
 ```
 mv wiki_name_id_map.txt ./wiki_data_generated
@@ -49,19 +51,19 @@ mv wiki_disambiguation_pages.txt ./wiki_data_generated
 python3 txt_to_json_conversion.py
 ```
 
-В конце этого шага в папке 'wiki_data_generated' появляется набор файлов 'wiki_name_id_map' , 'wiki_redirects' и 'wiki_disambiguation_pages' в 'txt' и 'json' форматах.
+In the end of the step there will be created set of files 'wiki_name_id_map' , 'wiki_redirects' и 'wiki_disambiguation_pages' in 'txt' and 'json' formats in 'wiki_data_generated' directory.
 
-##### Эмуляция размеченного датасета
+##### Emulation of marked datasets
 
-1.  Делим текстовый дамп Википедии на отдельные статьи с названиями формата 'id_12345.txt'
+1.  Split text Wikipedia Dump into separate articles with names like 'id_12345.txt'
 
 ```
 python3 wiki_dump_separate.py -p='./wiki_articles' -f='textWithAnchorsFromAllWikipedia.txt'
 ```
 
-2.  Обрабатываем полученные файлы, приводя их к формату используемого моделью датасета
+2.  Preprocess obtained files, leading them to the format used in End2End model
 
-| Оригинальный датасет | Полученный датасет |
+| Original dataset | Obtained dataset |
 | ------ | ------ |
 | DOCSTART_69_London | DOCSTART_2058943_иванчуковка |
 | MMSTART_17867 | Иванчуковка | 
@@ -71,33 +73,33 @@ python3 wiki_dump_separate.py -p='./wiki_articles' -f='textWithAnchorsFromAllWik
 | *NL* | *NL* | 
 
 
-Поскольку количество статей, необхдимых обработать ~1.5 млн статей, для оптимизации используется распараллеливание препроцессинга.
+As number of articles to be preprocessed is about ~1.5 mln articles there is used parallelization of preprocessing for the optimization.
 
 ```
 mpiexec -n=4 python -m mpi4py wiki_dataset_parallel.py
 ```
 
-где '-n' - количество работающих процессов.
+where '-n' is amount of working processes.
 
-Результатом работы скрипта будет набор текстовых файлов, из которых можно собирать датасет и набор 'json'-файлов с частотой встречаний упоминание:сущность.
+The result of script is a set of text files, that can be collected into dataset, and a set of 'json'-files with frequencies if mention:entity.
 
-##### Приведение Words&Entities Embeddings к нужному формату
+##### Leading Words&Entities Embeddings to needed format
 
-Файл с pretrained Wikipedia2Vec embeddings можно скачать [здесь](http://wikipedia2vec.s3.amazonaws.com/models/ru/2018-04-20/ruwiki_20180420_300d.pkl.bz2). 
+File with thr pretrained Wikipedia2Vec embeddings can be downloaded [here](http://wikipedia2vec.s3.amazonaws.com/models/ru/2018-04-20/ruwiki_20180420_300d.pkl.bz2). 
 
-Делим файл на word embeddings и entity embeddings.
+Separate obtained file into word embeddings and entity embeddings.
 
 ```
 python3 word_ent_embed_split.py
 ```
 
-##### Создание файла с именами людей(персон)
+##### Creating file with persons' names
 
-Перейти в [экспорт статей](https://ru.wikipedia.org/wiki/%D0%A1%D0%BB%D1%83%D0%B6%D0%B5%D0%B1%D0%BD%D0%B0%D1%8F:%D0%AD%D0%BA%D1%81%D0%BF%D0%BE%D1%80%D1%82) и в поле 'Добавить страницы из категории:' вставить категорию 'Персоналии по алфавиту'.
+Go to [articles export](https://ru.wikipedia.org/wiki/%D0%A1%D0%BB%D1%83%D0%B6%D0%B5%D0%B1%D0%BD%D0%B0%D1%8F:%D0%AD%D0%BA%D1%81%D0%BF%D0%BE%D1%80%D1%82) and put into the field 'Добавить страницы из категории:' category 'Персоналии по алфавиту'.
 
-Текст из окна добавить в файл 'persons.txt'.
+TAdd the text from the window to the file 'persons.txt'.
 
-Отформатировать полученный файл.
+Format obtained file.
 
 ```
 python3 persons_format.py
@@ -106,10 +108,10 @@ python3 persons_format.py
 
 ## Running the End2end model
 
-1. Скачать [End2End](https://github.com/dalab/end2end_neural_el) репозиторий. 
-2. Заменить файлы 'prepro_util.py' и 'util.py' из 'code/preprocessing' на расположенные в end2end директории.
-3. Если данные не были созданы по инструкции выше, скачать и распаковать в соответствующие папки [здесь](https://drive.google.com/drive/folders/19KtVTKnQuF6ZMZ76NJZr2QT_5xHp5Mt6?usp=sharing)
-4. Нужно поместить созданные файлы в соответствующие места в End2End репозитории
+1. Download [End2End](https://github.com/dalab/end2end_neural_el) repository. 
+2. Replace 'prepro_util.py' and 'util.py' files from 'code/preprocessing' with files located in end2end dir.
+3. If data hasn't been created wia instruction above, download and unpack it to the appropriate directories from [here](https://drive.google.com/drive/folders/19KtVTKnQuF6ZMZ76NJZr2QT_5xHp5Mt6?usp=sharing)
+4. Place created files to appropriate directories in End2End repository
 
 ```
 cp ./wiki_data_generated/wiki_disambiguation_pages.txt ./end2end/data/basic_data
@@ -120,15 +122,15 @@ cp ./wiki_data_generated/persons.txt ./end2end/data/basic_data
 cp ./data_generated/word2vec ./end2end/data/basic_data/wordEmbeddings/Word2Vec/
 ```
 
-5. Создать тренировочный датасет
+5. Create training dataset
 
 ```
 python3 emulate_data.py -n=10
 ```
 
-где '-n' - количество статей, сложенных в датасет. Полученные файлы сохранены в './emulated_data'
+where '-n' is the amount of articles in the dataset. Obtained files are located in './emulated_data'
 
-Поместить полученные файлы в соответствующие директории.
+Move obtained files in appropriate directories.
 
 ```
 cp ./emulated_data/prob_yago_crosswikis_wikipedia_p_e_m.txt ./end2end/data/basic_data/\
@@ -140,22 +142,21 @@ cp ./emulated_data/nnid2wikiid.txt ./end2end/data/entities/wikiid2nnid/
 cp ./emulated_data/aida_train.txt ./end2end/data/new_datasets/
 ```
 
-6. Запустить обработку созданных данных
+6. Run preprocessing of created data.
 
 ```
 python -m preprocessing.prepro_util --create_entity_universe True --lowercase_p_e_m True --lowercase_spans True
 python -m preprocessing.prepro_util
 ```
 
-7. Запустить тренировочный эксперимент (см. инструкцию в официальном репозитории)
+7. Run training experiment (follow the instructions in the official repository)
 
 ```
 export v=1
 python3 -m model.train --batch_size=4 --experiment_name=corefmerge --training_name=group_global/global_model_v$v --ent_vecs_regularization=l2dropout --evaluation_minutes=10 --nepoch_no_imprv=6 --span_emb="boundaries" --dim_char=50 --hidden_size_char=50 --hidden_size_lstm=150 --nn_components=pem_lstm_attention_global --fast_evaluation=True --all_spans_training=True --attention_ent_vecs_no_regularization=True --final_score_ffnn=0_0 --attention_R=10 --attention_K=100 --train_datasets=aida_train --el_datasets=aida_train --el_val_datasets=0 --global_thr=0.001 --global_score_ffnn=0_0 --continue_training=True
 ```
 
-8. По оканчании тренировки можно запустить gerbil server для evaluation модели
-
+8. After the finishing of training it's possible to run the gerbil server for model evaluation.
 ```
 python -m gerbil.server --training_name=group_global/global_model_v$v --experiment_name=corefmerge --persons_coreference_merge=True --all_spans_training=True
 ```
