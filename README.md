@@ -1,8 +1,9 @@
 # Entity Linking
 
 Applying [End2End](https://github.com/dalab/end2end_neural_el) approach to Entity Linking (EL) task in russian language.
+The project doesn't show perfect results from the scratch, there is still need in parameter optimization and changing the training dataset as Wikipedia data doesn't provide the best data for the task.
 
-The code solves several tasks:
+The code aims to solve several tasks:
 
 1.  Parsing of Russian Wikipedia dump
 2.  Creating files with info about knowledge base (KB, Wikipedia)
