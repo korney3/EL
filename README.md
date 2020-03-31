@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 ### Installing
 
-Data needed for running End2End model training can be downloaded here [здесь](https://drive.google.com/drive/folders/19KtVTKnQuF6ZMZ76NJZr2QT_5xHp5Mt6?usp=sharing). For running of the model go to "Running the End2end model" part.
+Data needed for running End2End model training can be downloaded [here](https://drive.google.com/drive/folders/19KtVTKnQuF6ZMZ76NJZr2QT_5xHp5Mt6?usp=sharing). For running of the model go to "Running the End2end model" part.
 
 For reproducing data obtaining one can follow instruction below.
 
